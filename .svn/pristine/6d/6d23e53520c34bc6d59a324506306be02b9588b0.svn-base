@@ -1,0 +1,139 @@
+<html>
+<head>
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
+<script>
+mouseX=0;
+mouseY=0;
+doShoot=false;
+frame=0;
+hp=1000;
+score=0;
+function makeBullet(x,y,vx,vy,team,sprite){
+	var bullet = new Object();
+	bullet.x = x;
+	bullet.y = y;
+	bullet.vx = vx;
+	bullet.vy = vy;
+	bullet.team = team;
+	bullet.sprite = sprite;
+	bullet.draw = function(){
+		im.drawImage(this.sprite.image,
+					this.sprite.x,this.sprite.y,
+					this.sprite.sWidth,this.sprite.sHeight,
+					this.x-this.sprite.dWidth/2,this.y-this.sprite.dHeight/2,
+					this.sprite.dWidth,this.sprite.dHeight);
+	}
+	return bullet;
+}
+$(document).ready(function(){
+	bullets = new Array();
+	R = $("#assets")[0];
+	width=$("#can").width();
+	height=$("#can").height();
+	$("#can")[0].width=width;
+	$("#can")[0].height=height;
+	im = $("#can")[0].getContext('2d');
+	player = makeBullet(width/2,height/2,0,0,0,{'image':R,'x':0,'y':0,'sWidth':32,'sHeight':32,'dHeight':32,'dWidth':32});
+	badblip = {'image':R,'x':32,'y':0,'sWidth':32,'sHeight':32,'dHeight':16,'dWidth':16};
+	goodblip = {'image':R,'x':64,'y':0,'sWidth':32,'sHeight':32,'dHeight':16,'dWidth':16};
+	enemies = new Array();
+	for(i=0;i<20;i++){
+		enemies.push(makeBullet(Math.random()*width,Math.random()*height,0,0,1,{'image':R,'x':96,'y':0,'sHeight':32,'sWidth':32,'dWidth':32,'dHeight':32}));
+	}
+	$("#can").mousemove(function(e){
+		mouseX = e.pageX - this.offsetLeft;
+		mouseY = e.pageY - this.offsetTop;
+	});
+	$("#can").mousedown(function(e){
+		doShoot=true;
+	});
+	$("#can").mouseup(function(e){
+		doShoot=false;
+	});
+	doLoop();
+});
+
+function doLoop(){
+	
+	player.x=mouseX;
+	player.y=mouseY;
+	frame++;
+	for(j=0;j<enemies.length;j++){
+		enemy=enemies[j];
+		enemy.x+=enemy.vx;
+		enemy.y+=enemy.vy;
+		
+		if((frame%30)==0){
+			enemy.vx=Math.random()*2.0-1.0;
+			enemy.vy=Math.random()*2.0-1.0;
+			
+			for(i=0;i<2*3.14159;i+=3.14159/16){
+				bullets.push(makeBullet(enemy.x,enemy.y,Math.cos(i)*16,Math.sin(i)*16,1,badblip));
+			}
+		}
+		if(enemy.x<0){enemy.vx=Math.abs(enemy.vx);}
+		if(enemy.y<0){enemy.vy=Math.abs(enemy.vy);}
+		if(enemy.x>width){enemy.vx=-1.0*Math.abs(enemy.vx);}
+		if(enemy.y>height){enemy.vy=-1.0*Math.abs(enemy.vy);}
+	}
+	if(doShoot){
+		var shoot = makeBullet(player.x,player.y-16,0,-16,0,goodblip);
+		bullets.push(shoot);
+	}
+	
+	
+	im.fillStyle="#000000";
+	im.fillRect(0,0,width,height);
+	for(i=0;i<bullets.length;i++){
+		bullets[i].x+=bullets[i].vx;
+		bullets[i].y+=bullets[i].vy;
+		if(bullets[i].team!=1){
+			for(j=0;j<enemies.length;j++){
+				enemy=enemies[j];
+				if((bullets[i].x-enemy.x)*(bullets[i].x-enemy.x)+(bullets[i].y-enemy.y)*(bullets[i].y-enemy.y)<(32*32)){
+					enemies.splice(j,1);
+					score+=100;
+				}
+			}
+		}
+		if(bullets[i].team==1){
+			if((bullets[i].x-player.x)*(bullets[i].x-player.x)+(bullets[i].y-player.y)*(bullets[i].y-player.y)<(32*32)){
+				bullets.splice(i,1);
+				hp--;
+			}
+		}
+		for(j=i+1;j<bullets.length;j++){
+			if(j==i){continue;}
+			
+			if(bullets[j].team==bullets[i].team){continue;}
+			if(bullets[j].x-bullets[i].x > 16){continue;}
+			if(bullets[j].x-bullets[i].x < -16){continue;}
+			if(bullets[j].y-bullets[i].y > 16){continue;}
+			if(bullets[j].y-bullets[i].y < -16){continue;}
+			if((bullets[i].x-bullets[j].x)*(bullets[i].x-bullets[j].x)+(bullets[i].y-bullets[j].y)*(bullets[i].y-bullets[j].y)<(16*16)){
+				bullets.splice(i,1);
+				bullets.splice(j-1,1);
+				score+=1;
+			}
+		}
+		if(bullets[i].y<0 || bullets[i].y>height || bullets[i].x<0 || bullets[i].x>width){bullets.splice(i,1);}else{
+			bullets[i].draw();
+		}
+	}
+	for(i=0;i<enemies.length;i++){enemies[i].draw();}
+	player.draw();
+	
+	
+	im.fillStyle="#FFFFFF";
+	im.fillText("Particles:"+(bullets.length+enemies.length+1.0),10,10);
+	im.fillText("Score:"+score,10,20);
+	im.fillText("HP:"+hp,10,30);
+	if(hp>0){setTimeout('doLoop()',30);}
+}
+</script>
+</head>
+<body>
+<canvas style='width:100%;height:100%;cursor:none;'id='can'><img alt='Y U NO SUPPORT CANVAS' src='html5yuno.jpg'/></canvas>
+<img style='display:none;' src='bulletstorm.png' id='assets'/>
+</body>
+</html>
